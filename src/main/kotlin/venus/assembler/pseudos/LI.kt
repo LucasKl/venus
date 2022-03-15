@@ -20,13 +20,16 @@ object LI : PseudoWriter() {
             throw AssemblerError("immediate to li too large or NaN")
         }
 
-        if (imm in -2048..2047) {
+        if (imm in -2048..2047 || (args[2].startsWith("0x") && imm <= 4095) ) {
             return listOf(listOf("addi", args[1], "x0", args[2]))
         } else {
-            val imm_hi = (imm + 0x800) ushr 12
-            val imm_lo = imm - (imm_hi shl 12)
+            var imm_hi = imm ushr 12
+            if(imm.and(0x800) == 0x800){
+                imm_hi = imm_hi.plus(1)
+            }
+            val imm_lo = imm and 0xFFF
             val lui = listOf("lui", args[1], imm_hi.toString())
-            val addi = listOf("addi", args[1], args[1], imm_lo.toString())
+            val addi = listOf("addi", args[1], args[1], "0x" + imm_lo.toString(16))
             return listOf(lui, addi)
         }
     }

@@ -23,8 +23,10 @@ internal fun getImmediate(str: String, min: Int, max: Int): Int {
         }
         throw AssemblerError("invalid number, got $str$hint")
     }
-
-    if (imm !in min..max)
+    if (str.startsWith("0x") && imm > max - min) {
+        throw AssemblerError("immediate $str (= $imm) out of range (should be between $min and $max)")
+    }
+    if (!str.startsWith("0x") && imm !in min..max)
         throw AssemblerError("immediate $str (= $imm) out of range (should be between $min and $max)")
 
     return imm

@@ -8,8 +8,8 @@ import venus.linker.Linker
 import venus.riscv.InstructionField
 import venus.riscv.userStringToInt
 import venus.simulator.Simulator
-import kotlin.browser.document
-import kotlin.browser.window
+import kotlinx.browser.document
+import kotlinx.browser.window
 
 /**
  * The "driver" singleton which can be called from Javascript for all functionality.

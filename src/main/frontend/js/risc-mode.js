@@ -106,7 +106,7 @@ CodeMirror.defineMode("riscv", function(config, parserConfig) {
 
     var keywords = regexFromWords([
         ".data", ".text", ".globl", ".float", ".double",
-        ".asciiz", ".word", ".byte"
+        ".asciiz", ".string", ".word", ".byte"
     ], "i");
 
     function normal(stream, state) {
@@ -176,7 +176,7 @@ CodeMirror.registerHelper("lint", "riscv", function (text) {
                      message: err.message});
     };
 
-    var res = window.venus_main.venus.assembler.Linter.lint(text);
+    var res = window.venus.venus.assembler.Linter.lint(text);
     for (var i = 0; i < res.length; i++) {
         parseError(res[i]);
     }

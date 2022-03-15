@@ -171,6 +171,26 @@ internal class AssemblerPassOne(private val text: String) {
                 currentDataOffset++
             }
 
+            ".string" -> {
+                checkArgsLength(args, 1)
+                val ascii: String = try {
+                    JSON.parse(args[0])
+                } catch (e: Throwable) {
+                    throw AssemblerError("couldn't parse ${args[0]} as a string")
+                }
+                for (c in ascii) {
+                    if (c.toInt() !in 0..127) {
+                        throw AssemblerError("unexpected non-ascii character: $c")
+                    }
+                    prog.addToData(c.toByte())
+                    currentDataOffset++
+                }
+
+                /* Add NUL terminator */
+                prog.addToData(0)
+                currentDataOffset++
+            }
+
             ".word" -> {
                 for (arg in args) {
                     val word = userStringToInt(arg)

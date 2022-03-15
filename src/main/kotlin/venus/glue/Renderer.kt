@@ -12,7 +12,7 @@ import venus.simulator.Simulator
 import venus.simulator.diffs.MemoryDiff
 import venus.simulator.diffs.PCDiff
 import venus.simulator.diffs.RegisterDiff
-import kotlin.browser.document
+import kotlinx.browser.document
 
 /* ktlint-enable no-wildcard-imports */
 

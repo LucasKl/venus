@@ -1,12 +1,12 @@
-group 'venus'
+group 'venus_main'
 version '0.1.0'
 
 buildscript {
-    ext.kotlin_version = '1.1.4'
-    ext.dokka_version = '0.9.14'
+    ext.kotlin_version = '1.6.10'
+    ext.dokka_version = '1.6.10'
 
     repositories {
-        maven { url 'https://dl.bintray.com/kotlin/kotlin-1.1.4' }
+        maven { url 'https://dl.bintray.com/kotlin/kotlin-1.6.10' }
         jcenter()
     }
     dependencies {
@@ -17,6 +17,7 @@ buildscript {
 
 apply plugin: 'kotlin2js'
 apply plugin: 'kotlin-dce-js'
+//apply plugin: 'org.jetbrains.kotlin.js'
 apply plugin: 'org.jetbrains.dokka'
 
 runDceKotlinJs.keep 'venus_main.venus.glue.Driver.run', 'venus_main.venus.assembler.Linter'
@@ -26,7 +27,7 @@ configurations {
 }
 
 repositories {
-    maven { url 'https://dl.bintray.com/kotlin/kotlin-1.1.4' }
+    maven { url 'https://dl.bintray.com/kotlin/kotlin-1.6.10' }
     mavenCentral()
 }
 
@@ -43,14 +44,16 @@ task ktlintFormat(type: JavaExec) {
     classpath = configurations.ktlint
     args "-F", "src/**/*.kt"
 }
-
+/*
 dokka {
     outputFormat = 'html'
     outputDirectory = "doc"
 }
+*/
 
 dependencies {
     ktlint 'com.github.shyiko:ktlint:0.8.1'
-    compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
 }
+

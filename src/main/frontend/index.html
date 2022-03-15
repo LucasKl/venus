@@ -4,15 +4,60 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>venus</title>
+  <title>Venus@ICS v0.1.3</title>
   <link rel="stylesheet" type="text/css" href="css/venus.css">
+  <!--<link rel="stylesheet" type="text/css" href="css/bulma.css">-->
+  <!--<link rel="stylesheet" type="text/css" href="css/codemirror.css">-->
 </head>
 <body>
-<div class="tabs is-boxed is-centered">
-  <ul>
-    <li id="editor-tab" class="is-active"><a onclick="driver.openEditor()">Editor</a></li>
-    <li id="simulator-tab"><a onclick="codeMirror.save(); driver.openSimulator()">Simulator</a></li>
-  </ul>
+<div id="modal-js-example" class="modal">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">Venus Simulator enhanced by ICS</p>
+      <button class="delete" aria-label="close"></button>
+    </header>
+    <section class="modal-card-body">
+      <div class="content">
+        <p>Origin: <a href="https://github.com/kvakil/venus">Kvakil Venus Simulator</a> </p>
+        <dl>
+          <dt>Enhancements by <a href="https://www.jku.at/ics">JKU - ICS</a></dt>
+          <dd>- Added ICS Information and Version Number</dd>
+          <dd>- addi: Fixed an issue when using Hex Value 0xFFF for Immediate Field</dd>
+          <dd>- .data: Added .string type</dd>
+          <dd>- li: Fixed an issue when using Hex Values for Immediate Field</dd>
+          <dd>- Added Load and Download possibilities</dd>
+          <dd>- More to come... </dd>
+        </dl>
+      </div>
+    </section>
+    <footer class="modal-card-foot">
+      Version: 0.1.3
+    </footer>
+  </div>
+</div>
+<div class="columns is-multiline is-mobile">
+  <div style="padding-right: 0rem" class="column is-one-quarter tabs is-boxed is-centerd">
+    <ul style="padding-left: 0rem">
+      <li id="venus-brand"><a style="padding-right: 0.5rem; color: #0084BB; font-weight: bold;" href="https://www.jku.at/ics">Venus@ICS</a></li>
+
+    </ul>
+  </div>
+  <div style="padding-left: 0rem; padding-right: 0rem" class="column is-half tabs is-boxed is-centered">
+    <ul>
+      <li id="load-file" ><label class="is-active" style="padding:0.7rem; cursor:pointer" onMouseOver="this.style.background='#f6f6f6'" onMouseOut="this.style.background='white'"><input style="display:none;" id="localFile" type="file" name="localFile" onChange="localLoad(this.files);" />Load File</label></li>
+      <li id="editor-tab" class="is-active"><a onclick="driver.openEditor()">Editor</a></li>
+      <li id="simulator-tab"><a onclick="codeMirror.save(); driver.openSimulator()">Simulator</a></li>
+      <li id="download-file"><label style="padding:0.7rem" onMouseOver="this.style.background='#f6f6f6'" onMouseOut="this.style.background='white'"><label style="cursor:pointer" id="saveFile" name="localSaveFile" onClick="localSave();" />Download</label></li>
+    </ul>
+  </div>
+  <div style="padding-left: 0rem;" class="column is-one-quarter tabs is-boxed is-centerd">
+    <ul>
+      <li id="venus-version"><a style="cursor: not-allowed; text-decoration:none; pointer-events: none; color:#0084BB; font-weight: bold" href="blablabla">v</a></li>
+      <li><button class="js-modal-trigger" data-target="modal-js-example" style="padding-left: 0rem; color: #0084BB; font-weight: bold; font-size:18px; background: none!important; border: none; padding: 0!important; " onMouseOver="this.style.textDecoration='underline'" onMouseLeave="this.style.textDecoration='none'">0.1.3</button></li>
+
+    </ul>
+  </div>
 </div>
 <div class="container is-fluid">
   <section class="section" id="editor-tab-view">
@@ -611,10 +656,14 @@
   </div>
 </section>
 <script type="text/javascript" src="js/codemirror.js"></script>
+<script type="text/javascript" src="js/kotlin.js"></script>
+<script type="text/javascript" src="js/risc-mode.js"></script>
 <script type="text/javascript" src="venus.js"></script>
 <script type="text/javascript">
-    var driver = venus_main.venus.glue.Driver;
+    var driver = venus.venus.glue.Driver;
     var editor = document.getElementById("asm-editor");
+    var file;
+
     var codeMirror = CodeMirror.fromTextArea(editor,
         {
             lineNumbers: true,
@@ -625,6 +674,96 @@
         }
     );
     codeMirror.setSize("100%", "88vh");
+
+    function localLoad(files) {
+       if (files.length == 1) {
+            file = files[0]
+            var reader = new FileReader();
+            reader.onload = function(e) {
+              codeMirror.setValue(e.target.result);
+            };
+            reader.readAsText(files[0]);
+         }
+    }
+
+    function localSave() {
+      // your CodeMirror textarea ID
+      var textToWrite = codeMirror.getValue();
+
+      // preserving line breaks
+      var textToWrite = textToWrite.replace(/\n/g, "\r\n");
+
+      var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
+      var fileNameToSaveAs = "riscv_assembly.s"
+      // filename to save as
+      if(typeof file !== 'undefined'){
+        fileNameToSaveAs = file.name;
+      }
+      var downloadLink = document.createElement("a");
+      downloadLink.download = fileNameToSaveAs;
+
+      // hidden link title name
+      downloadLink.innerHTML = "LINKTITLE";
+
+      window.URL = window.URL || window.webkitURL;
+
+      downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+
+      downloadLink.onclick = destroyClickedElement;
+      downloadLink.style.display = "none";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+    }
+
+    function destroyClickedElement(event) {
+      document.body.removeChild(event.target);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Functions to open and close a modal
+      function openModal($el) {
+        $el.classList.add('is-active');
+      }
+
+      function closeModal($el) {
+        $el.classList.remove('is-active');
+      }
+
+      function closeAllModals() {
+        (document.querySelectorAll('.modal') || []).forEach(($modal) => {
+          closeModal($modal);
+        });
+      }
+
+      // Add a click event on buttons to open a specific modal
+      (document.querySelectorAll('.js-modal-trigger') || []).forEach(($trigger) => {
+        const modal = $trigger.dataset.target;
+        const $target = document.getElementById(modal);
+        console.log($target);
+
+        $trigger.addEventListener('click', () => {
+          openModal($target);
+        });
+      });
+
+      // Add a click event on various child elements to close the parent modal
+      (document.querySelectorAll('.modal-background, .modal-close, .modal-card-head .delete, .modal-card-foot .button') || []).forEach(($close) => {
+        const $target = $close.closest('.modal');
+
+        $close.addEventListener('click', () => {
+          closeModal($target);
+        });
+      });
+
+      // Add a keyboard event to close all modals
+      document.addEventListener('keydown', (event) => {
+        const e = event || window.event;
+
+        if (e.keyCode === 27) { // Escape key
+          closeAllModals();
+        }
+      });
+    });
 </script>
 </body>
 </html>

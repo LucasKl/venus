@@ -81,6 +81,32 @@ class LexerTest {
         assertTrue(errors3.isNotEmpty())
     }
 
+    @Test fun lexStringBadStrings() {
+        val (_, errors1) = Assembler.assemble("""
+        .data
+        .string   unquoted
+        .text
+        nop
+        """)
+        assertTrue(errors1.isNotEmpty())
+
+        val (_, errors2) = Assembler.assemble("""
+        .data
+        .string   "no end quote
+        .text
+        nop
+        """)
+        assertTrue(errors2.isNotEmpty())
+
+        val (_, errors3) = Assembler.assemble("""
+        .data
+        .string   "good" junk
+        .text
+        nop
+        """)
+        assertTrue(errors3.isNotEmpty())
+    }
+
     @Test fun lexMultipleLabels() {
         val line = "hello: world: label: me:"
         val (labels, args) = Lexer.lexLine(line)

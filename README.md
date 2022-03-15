@@ -1,11 +1,10 @@
-# [venus](https://kvakil.github.io/venus/)
-[![Build Status](https://travis-ci.org/kvakil/venus.svg?branch=master)](https://travis-ci.org/kvakil/venus)
+# [Venus@ICS](https://venus.ics.jku.at)
 
-__venus__ is a RISC-V instruction set simulator built for education.
+__Venus@ICS__ is a fork from [Kvakil Venus on Github](https://github.com/kvakil/venus). Venus is a RISC-V instruction set simulator built for education.
 
-## Using venus
+## Using Venus@ICS
 
-venus is [available online](https://kvakil.github.io/venus/).
+Venus@ICS is [available online](https://venus.ics.jku.at).
 
 ## Features
 * RV32IM
@@ -17,10 +16,4 @@ venus is [available online](https://kvakil.github.io/venus/).
 
 ## Resources
 
-#### [User Guide](https://github.com/kvakil/venus/wiki)
-
-#### [Roadmap](https://github.com/kvakil/venus/projects/2)
-
-#### [Contributing](https://github.com/kvakil/venus/blob/master/CONTRIBUTING.md)
-
-#### [MIT License](https://github.com/kvakil/venus/blob/master/LICENSE)
+#### [MIT License](https://github.com/ics-jku/venus/blob/master/LICENSE)
