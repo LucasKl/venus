@@ -20,7 +20,7 @@ object LI : PseudoWriter() {
             throw AssemblerError("immediate to li too large or NaN")
         }
 
-        if (imm in -2048..2047 || (args[2].startsWith("0x") && imm <= 4095) ) {
+        if (imm in -2048..2047) {
             return listOf(listOf("addi", args[1], "x0", args[2]))
         } else {
             var imm_hi = imm ushr 12
