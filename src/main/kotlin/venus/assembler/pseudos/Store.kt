@@ -1,6 +1,6 @@
 package venus.assembler.pseudos
 
-import venus.assembler.AssemblerPassOne
+import venus.assembler.AssemblerPassTwo
 import venus.assembler.LineTokens
 import venus.assembler.PseudoWriter
 import venus.riscv.insts.dsl.relocators.PCRelHiRelocator
@@ -11,7 +11,7 @@ import venus.riscv.userStringToInt
  * Writes a store pseudoinstruction. (Those applied to a label)
  */
 object Store : PseudoWriter() {
-    override operator fun invoke(args: LineTokens, state: AssemblerPassOne): List<LineTokens> {
+    override operator fun invoke(args: LineTokens, state: AssemblerPassTwo): List<LineTokens> {
         checkArgsLength(args, 4)
         val label = args[2]
         try {

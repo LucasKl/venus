@@ -20,31 +20,192 @@ object Assembler {
      * @see venus.simulator.Simulator
      */
     fun assemble(text: String): AssemblerOutput {
-        val (passOneProg, talInstructions, passOneErrors) = AssemblerPassOne(text).run()
+        val (linesWithExpandedMacros, errors) = AssemblerMacroPass(text).run()
+        val (passOneProg, talInstructions, passOneErrors) = AssemblerPassTwo(linesWithExpandedMacros, errors).run()
         if (passOneErrors.isNotEmpty()) {
             return AssemblerOutput(passOneProg, passOneErrors)
         }
-        val passTwoOutput = AssemblerPassTwo(passOneProg, talInstructions).run()
+        val passTwoOutput = AssemblerPassThree(passOneProg, talInstructions).run()
         return passTwoOutput
     }
 }
 
 data class DebugInfo(val lineNo: Int, val line: String)
 data class DebugInstruction(val debug: DebugInfo, val LineTokens: List<String>)
-data class PassOneOutput(
+data class PassTwoOutput(
         val prog: Program,
         val talInstructions: List<DebugInstruction>,
         val errors: List<AssemblerError>
 )
 data class AssemblerOutput(val prog: Program, val errors: List<AssemblerError>)
 
+data class AssemblerMacro(val name: String, val args: List<String>, val instructions: MutableList<String>)
+
 /**
- * Pass #1 of our two pass assembler.
+ * Pass #1 of our three pass assembler.
+ *
+ * It parses macro definitions and expands macros that are found inside [text]
+ * It returns a pair containing a list of instructions after all macros are expanded and a list of errors that were
+ * the code before macro expansion.
+ */
+internal class AssemblerMacroPass(private val text: String) {
+    /** Result lines */
+    val outLines : MutableList<String> = mutableListOf()
+    /** Macros */
+    /** Set to true when a new valid .macro definition is found. All following instructions go into macro until .endm */
+    var recordingMacro = false
+    /** The current macro that is being recorded */
+    var currentMacro : AssemblerMacro = AssemblerMacro("", emptyList(), mutableListOf())
+    /** A mapping from macro names to macro definitions */
+    val macroMap : HashMap<String, AssemblerMacro> = HashMap<String, AssemblerMacro> ()
+    /** List of all errors encountered */
+    private val errors = ArrayList<AssemblerError>()
+
+    fun run(): Pair<ArrayList<String>, ArrayList<AssemblerError>> {
+        parseMacros()
+        expandMacros()
+        return ArrayList(outLines) to errors
+    }
+
+    /**
+     * Parses the code in [text] for valid macro definitions and sets [macroMap] and [outLines].
+     */
+    private fun parseMacros() {
+        var currentLineNumber = 1
+        for (line in text.split('\n')) {
+            try {
+                val (labels, args) = Lexer.lexLine(line)
+                if (args.size == 0) { // skip blank lines
+                    currentLineNumber++
+                    outLines.add("")
+                    continue
+                }
+
+                if (args[0] == ".macro") {
+                    if (recordingMacro) {
+                        throw AssemblerError("Macro definition inside another macro is not allowed")
+                    }
+
+                    recordingMacro = true
+                    if (args.size < 2) {
+                        currentMacro = AssemblerMacro("", emptyList(), mutableListOf())
+                        throw AssemblerError("Macro definition invalid: no name specified")
+                    }
+                    currentMacro = AssemblerMacro(args[1], args.drop(2), mutableListOf())
+                    outLines.add("")
+                } else if (args[0] == ".endm") {
+                    if (recordingMacro) {
+                        macroMap.put(currentMacro.name, currentMacro)
+                        recordingMacro = false
+                    } else {
+                        throw AssemblerError(".endm outside of macro definition")
+                    }
+                    outLines.add("")
+                } else if (recordingMacro) {
+                    currentMacro.instructions.add(line)
+
+                    /** Mark wrong arguments */
+                    val (labels, tokens) = Lexer.lexLine(line)
+                    for (token in tokens) {
+                        if (token[0] == '\\' && !currentMacro.args.contains(token.drop(1))) {
+                            throw AssemblerError("Macro argument " + token + " invalid")
+                        }
+                    }
+                    outLines.add("")
+                } else if (isValidMacro(args[0])) {
+                    val macro = macroMap.get(args[0])
+                    val arguments = args.drop(1)
+                    if (macro != null && arguments.size != macro.args.size) {
+                        throw AssemblerError("Macro " + macro.name + " requires " + macro.args.size + " arguments")
+                    }
+                    outLines.add(line)
+                } else {
+                    outLines.add(line)
+                }
+            } catch (e: AssemblerError) {
+                errors.add(AssemblerError(currentLineNumber, e))
+
+            }
+            currentLineNumber++
+        }
+    }
+
+    /**
+     * Goes throug [outLines] and expands valid macros. Works in-place on [outLines] which is later used for the next pass
+     */
+    private fun expandMacros() {
+        var index = 0
+
+        while (index < outLines.size && outLines.size > 0) {
+            try {
+                val line = outLines[index]
+                val (labels, args) = Lexer.lexLine(line)
+                if (args.size == 0) { // skip blank lines
+                    index++
+                    continue
+                }
+
+                // If we found a valid macro expand it
+                if (isValidMacro(args[0])) {
+                    /** get macro from map. We know this macro exists since it passed [isValidMacro] */
+                    val macro = macroMap.get(args[0])
+                    val arguments = args.drop(1)
+                    // remove the line from the input
+                    outLines.removeAt(index)
+                    // store index to later return to this place to expand nested macros
+                    val storeIndex = index
+                    for (instruction in macro!!.instructions) {
+                        val (labels, tokens) = Lexer.lexLine(instruction)
+
+                        /**
+                         * A helper function that replaces arguments inside the macro body with the passed values
+                         */
+                        fun replaceMacroArg(name: String): String {
+                            // not an argument, we can return
+                            if (name[0] != '\\') return name
+
+                            var argIndex = 0
+                            for (argument in macro.args) {
+                                // we found the correct argument. Replace with value from passed argument list
+                                if (name.drop(1) == argument) {
+                                    return arguments[argIndex]
+                                }
+                                argIndex++
+                            }
+                            throw AssemblerError("Macro argument invalid")
+                        }
+
+                        // join everything back to string
+                        val replacedArgs = tokens.map { replaceMacroArg(it) }.joinToString(separator = " ")
+                        outLines.add(index++, replacedArgs)
+                    }
+                    index = storeIndex - 1
+                }
+                index++
+            } catch (e: AssemblerError) {
+                errors.add(AssemblerError(++index, e))
+                index++
+            }
+        }
+    }
+
+    /**
+     * Determines if the given token is the name of a defined macro
+     *
+     * @param cmd the token to check
+     * @return true if the token is the name of a defined macro
+     * @see parseAssemblerDirective
+     */
+    private fun isValidMacro(cmd: String) = macroMap.containsKey(cmd)
+}
+
+/**
+ * Pass #2 of our two pass assembler.
  *
  * It parses labels, expands pseudo-instructions and follows assembler directives.
- * It populations [talInstructions], which is then used by [AssemblerPassTwo] in order to actually assemble the code.
+ * It populations [talInstructions], which is then used by [AssemblerPassThree] in order to actually assemble the code.
  */
-internal class AssemblerPassOne(private val text: String) {
+internal class AssemblerPassTwo(private val lines: ArrayList<String>, val errors: ArrayList<AssemblerError>) {
     /** The program we are currently assembling */
     private val prog = Program()
     /** The text offset where the next instruction will be written */
@@ -58,15 +219,15 @@ internal class AssemblerPassOne(private val text: String) {
     /** The current line number (for user-friendly errors) */
     private var currentLineNumber = 0
     /** List of all errors encountered */
-    private val errors = ArrayList<AssemblerError>()
+    //private val errors = ArrayList<AssemblerError>()
 
-    fun run(): PassOneOutput {
+    fun run(): PassTwoOutput {
         doPassOne()
-        return PassOneOutput(prog, talInstructions, errors)
+        return PassTwoOutput(prog, talInstructions, errors)
     }
 
     private fun doPassOne() {
-        for (line in text.split('\n')) {
+        for (line in lines) {
             try {
                 currentLineNumber++
 
@@ -139,6 +300,9 @@ internal class AssemblerPassOne(private val text: String) {
         when (directive) {
             ".data" -> inTextSegment = false
             ".text" -> inTextSegment = true
+
+            ".macro" -> true
+            ".endm" -> true
 
             ".byte" -> {
                 for (arg in args) {
@@ -219,13 +383,13 @@ internal class AssemblerPassOne(private val text: String) {
 }
 
 /**
- * Pass #2 of our two pass assembler.
+ * Pass #3 of our two pass assembler.
  *
  * It writes TAL instructions to the program, and also adds debug info to the program.
  * @see addInstruction
  * @see venus.riscv.Program.addDebugInfo
  */
-internal class AssemblerPassTwo(val prog: Program, val talInstructions: List<DebugInstruction>) {
+internal class AssemblerPassThree(val prog: Program, val talInstructions: List<DebugInstruction>) {
     private val errors = ArrayList<AssemblerError>()
     fun run(): AssemblerOutput {
         for ((dbg, inst) in talInstructions) {

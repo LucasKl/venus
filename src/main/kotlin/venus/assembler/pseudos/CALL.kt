@@ -1,6 +1,6 @@
 package venus.assembler.pseudos
 
-import venus.assembler.AssemblerPassOne
+import venus.assembler.AssemblerPassTwo
 import venus.assembler.LineTokens
 import venus.assembler.PseudoWriter
 import venus.riscv.insts.dsl.relocators.PCRelHiRelocator
@@ -10,7 +10,7 @@ import venus.riscv.insts.dsl.relocators.PCRelLoRelocator
  * Writes pseudoinstruction `call label`.
  */
 object CALL : PseudoWriter() {
-    override operator fun invoke(args: LineTokens, state: AssemblerPassOne): List<LineTokens> {
+    override operator fun invoke(args: LineTokens, state: AssemblerPassTwo): List<LineTokens> {
         checkArgsLength(args, 2)
 
         val auipc = listOf("auipc", "x6", "0")
