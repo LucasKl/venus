@@ -74,7 +74,7 @@ internal class AssemblerMacroPass(private val text: String) {
         var currentLineNumber = 1
         for (line in text.split('\n')) {
             try {
-                val (labels, args) = Lexer.lexLine(line)
+                val (_, args) = Lexer.lexLine(line)
                 if (args.size == 0) { // skip blank lines
                     currentLineNumber++
                     outLines.add("")
@@ -105,7 +105,7 @@ internal class AssemblerMacroPass(private val text: String) {
                     currentMacro.instructions.add(line)
 
                     /** Mark wrong arguments */
-                    val (labels, tokens) = Lexer.lexLine(line)
+                    val (_, tokens) = Lexer.lexLine(line)
                     for (token in tokens) {
                         if (token[0] == '\\' && !currentMacro.args.contains(token.drop(1))) {
                             throw AssemblerError("Macro argument " + token + " invalid")
@@ -139,7 +139,7 @@ internal class AssemblerMacroPass(private val text: String) {
         while (index < outLines.size && outLines.size > 0) {
             try {
                 val line = outLines[index]
-                val (labels, args) = Lexer.lexLine(line)
+                val (_, args) = Lexer.lexLine(line)
                 if (args.size == 0) { // skip blank lines
                     index++
                     continue
@@ -155,7 +155,7 @@ internal class AssemblerMacroPass(private val text: String) {
                     // store index to later return to this place to expand nested macros
                     val storeIndex = index
                     for (instruction in macro!!.instructions) {
-                        val (labels, tokens) = Lexer.lexLine(instruction)
+                        val (_, tokens) = Lexer.lexLine(instruction)
 
                         /**
                          * A helper function that replaces arguments inside the macro body with the passed values
@@ -200,7 +200,8 @@ internal class AssemblerMacroPass(private val text: String) {
 }
 
 /**
- * Pass #2 of our two pass assembler.
+ * Pass #2
+ * of our two pass assembler.
  *
  * It parses labels, expands pseudo-instructions and follows assembler directives.
  * It populations [talInstructions], which is then used by [AssemblerPassThree] in order to actually assemble the code.
